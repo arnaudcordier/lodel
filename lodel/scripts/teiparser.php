@@ -370,7 +370,6 @@ class TEIParser extends XMLReader
 
 		$this->_parseBlocks($simplexml);
 		unset($simplexml);
-
 		$this->_parseAfter();
 
 		if(count($this->_tags)) throw new Exception('ERROR: The number of opening/closing tag does not match : '.var_export($this->_tags, true));
@@ -1040,7 +1039,7 @@ class TEIParser extends XMLReader
 						$currentNode =& $this->_contents[$obj->name][$lang][$id];
 					}
 					else $currentNode =& $this->_contents[$obj->name][$id];
-
+                    
 					$currentNode .= $this->_parse($v->asXML());
 				}
 			}
@@ -1065,14 +1064,22 @@ class TEIParser extends XMLReader
 		{
 			if(parent::ELEMENT === $this->nodeType)
 			{
+                                if ('formula' === $this->localName)
+				{
+					$attrs = $this->_parseAttributes();
+					if (isset($attrs['notation'])) {
+                                                $math = $this->readInnerXml();
+						$text .= $math.$this->_closeTag();
+						$this->next();
+						continue;
+					}
+				}
 				if('div' === $this->localName) continue; // container, not used
 
 				$attrs = $this->_parseAttributes();
 
 				if(isset($attrs['rend']) && in_array(strtolower($attrs['rend']), $this->_notesstyles) ) continue;
-
 				$text .= $this->_getTagEquiv($this->localName, $attrs);
-
 			}
 			elseif(parent::END_ELEMENT === $this->nodeType)
 			{
@@ -1080,6 +1087,7 @@ class TEIParser extends XMLReader
 				elseif('div' === $this->localName) continue;
 
 				$rend = $this->getAttribute('rend');
+
 
                 if(isset($rend) && in_array(strtolower($rend), $this->_notesstyles) ) continue;
 
@@ -1105,7 +1113,6 @@ class TEIParser extends XMLReader
 		}
 
 		$this->close();
-
 		return $text;
 	}
 
@@ -1466,18 +1473,27 @@ class TEIParser extends XMLReader
 		while($this->read()) {
 			if(parent::ELEMENT === $this->nodeType)
 			{
-				if('list' === $this->localName)
+				if('list' === $this->localName){
 					$text .= $this->_parseList($this->_parseAttributes());
-				elseif('item' === $this->localName)
+                                }elseif('item' === $this->localName)
 				{
-					$tags = '<li' . $this->_addAttributes($this->_parseAttributes()) . '>';
+                                        $tags = '<li' . $this->_addAttributes($this->_parseAttributes()) . '>';
 					$this->_tags[] = 'li';
-				}
-				else
-					$tags .= $this->_getTagEquiv($this->localName, $this->_parseAttributes());
+				}elseif('formula' === $this->localName){
+					/*$attrs = $this->_parseAttributes();
+					if (isset($attrs['notation'])) {
+                                                $math = $this->readInnerXml();
+						$text .= $math.$this->_closeTag();
+						$this->next();*/
+						continue;
+					//}
+				}else{
+                                    $tags .= $this->_getTagEquiv($this->localName, $this->_parseAttributes());
+                                }
 			}
 			elseif(parent::END_ELEMENT === $this->nodeType)
 			{
+                                if('formula' === $this->localName) continue;
 				$text .= $tags . $this->_closeTag();
 				$tags = '';
 				if('list' === $this->localName) break;
@@ -1561,7 +1577,7 @@ class TEIParser extends XMLReader
 					$text .= '<td' . $attributs . '>';
 					$this->_tags[] = 'td';
 				}
-				elseif('anchor' === $this->localName)
+				elseif('anchor' === $this->localName || 'formula' === $this->localName)
 				{
 						continue;
 				}
@@ -1681,6 +1697,14 @@ class TEIParser extends XMLReader
 				{ // we add the anchor at the beginning
 					$text .= '<a class="'.ucfirst($attrs['place']).'noteSymbol" href="#bodyftn'.$this->_nbNotes.'" id="ftn'.$this->_nbNotes.'">'.$attrs['n'].'</a> ';
 					$first = true;
+				}elseif('formula' === $this->localName){
+					/*$attrs = $this->_parseAttributes();
+					if (isset($attrs['notation'])) {
+                                                $math = $this->readInnerXml();
+						$text .= $math.$this->_closeTag();
+						$this->next();*/
+						continue;
+					//}
 				}
 			}
 			elseif(parent::END_ELEMENT === $this->nodeType)
